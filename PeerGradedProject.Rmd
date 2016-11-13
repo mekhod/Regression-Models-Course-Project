@@ -1,0 +1,100 @@
+---
+title: "RegressionFinalProject"
+author: "MK"
+date: "November 12, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Excutive Summary:
+In this regression analysis, first a fit between mpg and regressors is calculated. In this fit, the am variable (transmission kind) does not have significant contribution based on the P value obtained from anova function. Another fit is introduced which indicates relationship between transmission and mpg. The results show that automatic transmission is better for MPG.
+
+# Analysis:
+In this analysis the contribution of every regressor in the linear regression that predicts mpg is studied by evaluating their P values in nested models. We first start with a simple regression between mpg and cyl.
+
+```{r}
+lmd1 <- lm(mpg~factor(cyl), data = mtcars)
+summary(lmd1)$coef
+```
+
+Now, we add other regressors to this model one by one and and anylize their necessity via anova function.
+```{r}
+lmd2 <- lm(mpg~factor(cyl)+disp-1, data = mtcars)
+anova(lmd1, lmd2)
+```
+The resultant p value indicates that the new term in mdl2 is neccessary over mdl1.
+
+We add a new term which is the interaction between disp and factor(cyl).
+```{r}
+lmd3 <- lm(mpg~factor(cyl)+disp+disp*factor(cyl), data = mtcars)
+anova(lmd1, lmd2, lmd3)
+```
+As p value indicates, the new term in mdl3 is necessary over mdl2.
+
+Let's take a look at the fittings.
+```{r, fig.width = 4, fig.height = 4}
+plot(mtcars$disp, mtcars$mpg, type = 'n', frame=FALSE, xlab = 'disp', ylab = 'mpg')
+abline(lm(mtcars$mpg~mtcars$disp), lwd = 2)
+abline(coef(lmd3)[1], coef(lmd3)[4], col="red")
+points(mtcars$disp[mtcars$cyl==4], mtcars$mpg[mtcars$cyl==4],
+       pch=21, col='black', bg="red", cex=2)
+abline(coef(lmd3)[1]+coef(lmd3)[2], coef(lmd3)[4]+coef(lmd3)[5], col='blue')
+points(mtcars$disp[mtcars$cyl==6], mtcars$mpg[mtcars$cyl==6],
+       pch=21, col='black', bg="blue", cex=2)
+abline(coef(lmd3)[1]+coef(lmd3)[3], coef(lmd3)[4]+coef(lmd3)[6], col='dark green')
+points(mtcars$disp[mtcars$cyl==8], mtcars$mpg[mtcars$cyl==8],
+       pch=21, col='black', bg="dark green", cex=2)
+legend('topright', legend = c('all together', '4 cyl','6 cyl','8 cyl'),
+       col = c('black','red', 'blue', 'dark green'), lty=1,
+       lwd = 2)
+```
+
+As shown in the graph, the four cylinder cars mpg has stronger relationship with disp regressor.
+
+If we add other variables(regressors) one by one and study their significance using anova function, we will see that none of the remaining variables (including transmission(am)) are significant for the regression model.
+
+So far, it was shown that lmd3 is the best model for mtcar data that shows the relationship between mpg and other variables. We can further analyze lmd3 as follows:
+```{r, fig.width = 3, fig.height = 3}
+plot(lmd3)
+```
+
+The Residuals vs Fitted plot indicates there is no relationship between Residuals and Fitted values which shows a good fit. The Q-Q plot shows that the residuals distribution is normal. And the Standardized Residulas plots show the presence of one high leverage point (Hornet 4 Drive) which does not seem to be influential.
+
+Based on this analysis the am (transmission kind) variable is not necessary for mpg prediction if we use the variables in lmd3.
+
+However, to better understand the relationship between mpg and transmission variable, we can start our model with using the am variable.
+```{r}
+lmd12 <- lm(mpg~factor(am), data = mtcars)
+summary(lmd12)$coef
+```
+Based on the P values, it can be concluded that there is a relationship between transmission kind and mpg.
+
+The lmd12 coefficients show that the average of mpg increases by around seven units for automatic transmission with refrence to manual transmission with an mpg average of around 17.
+
+This model can be further studied by adding other variables to the model and applying anova analysis to see if the added variable is necessary or not.
+
+Lets add the cyl variable.
+```{r}
+lmd13 <- lm(mpg~factor(am) + factor(cyl) + factor(cyl)*factor(am), data = mtcars)
+anova(lmd12, lmd13)
+```
+The anova analysis results indicate that the cyl term is necessary for mpg analysis.
+
+To better understand the relationship between the am and cyl variables, we should study the fitting coefficients of lmd13.
+```{r}
+summary(lmd13)$coef
+```
+The coefficients show that switching from manual to automatic transmission will increase the average of mpg.
+
+This fact can be visualized as follows:
+```{r, fig.width = 10, fig.height = 4}
+require(ggplot2)
+transmission <- mtcars$am
+transmission[mtcars$am == 0] <- 'manual'
+transmission[mtcars$am == 1] <- 'automatic'
+temp <- interaction( transmission, factor(mtcars$cyl) )
+ggplot( aes(y=mpg, x=temp, fill=factor(mtcars$cyl)), data = mtcars ) + geom_boxplot()
+```
+
